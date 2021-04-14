@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        .newCircle {
+            width: 100px;
+            height: 30px;
+            line-height: 30px;
+            background: green;
+            color: honeydew;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .dialog {
+            display: none;
+        }
+        .dialog input {
+            display: block;
+            margin-top: 20px;
+            width: 50%;
+        }
+        .dialogConfirm {
+            margin-top: 20px;
+            width: 50px;
+            height: 30px;
+            line-height: 30px;
+            background: lightblue;
+            color: honeydew;
+            border-radius: 5px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="newCircle" onclick="newCircle()">新建周期</div>
+    <div class="dialog">
+        <input id="start" type="text" placeholder="请输入开始日期，默认从今天开始">
+        <input id="circle" type="text" placeholder="请输入周期，默认为2周">
+        <div class="dialogConfirm" onclick="dialogConfirm()">确定</div>
+    </div>
+    <script>
+        var request, db, objectStore;
+        function initIndexDB (cb, start, cicle) {
+            request = window.indexedDB.open('yjy_circle', '1');
+            request.onerror = function (event) {
+                console.log('数据库打开报错');
+            };
+            request.onsuccess = function (event) {
+                db = request.result;
+                cb && cb(start, circle)
+                console.log('数据库打开成功');
+            };
+            request.onupgradeneeded = function (event) {
+                db = event.target.result;
+                if (!db.objectStoreNames.contains('yjy_circle')) {
+                    objectStore = db.createObjectStore('yjy_circle', { autoIncrement: true });
+                }
+            }
+        }
+        function newCircle () {
+            var dialog = document.querySelector('.dialog')
+            console.log(dialog)
+            dialog.style.display = 'block'
+        }
+        function dialogConfirm () {
+            var dialog = document.querySelector('.dialog')
+            dialog.style.display = 'none'
+            var start = document.querySelector('#start').value || new Date()
+            var circle = document.querySelector('#circle').value || 14
+            initIndexDB(add, start, circle)
+        }
+        function add(start, circle) {
+            request = db.transaction(['yjy_circle'], 'readwrite')
+                .objectStore('yjy_circle')
+                .add({ start: start, circle: circle, date: new Date()});
+
+            request.onsuccess = function (event) {
+                console.log('数据写入成功');
+            };
+
+            request.onerror = function (event) {
+                console.log('数据写入失败');
+            }
+        }
+        function read() {
+            var transaction = db.transaction(['yjy_circle']);
+            var objectStore = transaction.objectStore('yjy_circle');
+            var request = objectStore.get(1);
+
+            request.onerror = function(event) {
+                console.log('事务失败');
+            };
+
+            request.onsuccess = function( event) {
+                if (request.result) {
+                    console.log(request.result);
+                } else {
+                    console.log('未获得数据记录');
+                }
+            };
+        }
+        initIndexDB(read)
+
+    </script>
+</body>
+</html>
