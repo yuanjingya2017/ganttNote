@@ -5,9 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
     <style>
+        body {
+            padding: 30px;
+        }
         .newCircle {
-            width: 100px;
+            max-width: 200px;
             height: 30px;
+            margin-bottom: 10px;
             line-height: 30px;
             background: green;
             color: honeydew;
@@ -35,75 +39,89 @@
     </style>
 </head>
 <body>
-    <div class="newCircle" onclick="newCircle()">新建周期</div>
+    <div class="newCircle" onclick="newCircle()">新建/新建周期</div>
+    <div class="newCircle" onclick="newVersion()">增加迭代版本</div>
     <div class="dialog">
         <input id="start" type="text" placeholder="请输入开始日期，默认从今天开始">
         <input id="circle" type="text" placeholder="请输入周期，默认为2周">
         <div class="dialogConfirm" onclick="dialogConfirm()">确定</div>
     </div>
     <script>
-        var request, db, objectStore;
-        function initIndexDB (cb, start, cicle) {
-            request = window.indexedDB.open('yjy_circle', '1');
+        function InitIndexDB (database, cb, params) {
+            this.name = database;
+            this.request = window.indexedDB.open(database, '1');
+            return this;
+        }
+        function setCBfor (obj, cb, params) {
+            let request = obj.request
             request.onerror = function (event) {
                 console.log('数据库打开报错');
-            };
+            }
             request.onsuccess = function (event) {
-                db = request.result;
-                cb && cb(start, circle)
+                obj.db = event.target.result;
+                cb && obj[cb](obj.name, params);
                 console.log('数据库打开成功');
-            };
+            }
             request.onupgradeneeded = function (event) {
-                db = event.target.result;
-                if (!db.objectStoreNames.contains('yjy_circle')) {
-                    objectStore = db.createObjectStore('yjy_circle', { autoIncrement: true });
+                obj.db = event.target.result;
+                if (!obj.db.objectStoreNames.contains(database)) {
+                    obj.objectStore = obj.db.createObjectStore(database, { autoIncrement: true });
                 }
             }
+            return request;
         }
+        InitIndexDB.prototype.add = function(database, params) {
+            this.addres = this.db.transaction([database], 'readwrite')
+                .objectStore(database)
+                .add({id: 1, ...params, date: new Date()});
+
+            this.addres.onsuccess = function (event) {
+                console.log('数据写入成功');
+            };
+
+            this.addres.onerror = function (event) {
+                console.log('数据写入失败');
+            }
+        }
+        InitIndexDB.prototype.read = function(database) {
+            this.objectStore = this.db.transaction([database]).objectStore(database);
+            this.readres = this.objectStore.get(1);
+
+            this.readres.onerror = function(event) {
+                console.log('事务失败');
+            };
+
+            this.readres.onsuccess = function( event) {
+                if (event.target.result) {
+                    console.log(event.target.result);
+                } else {
+                    console.log('未获得数据记录');
+                }
+            };
+        }
+
         function newCircle () {
             var dialog = document.querySelector('.dialog')
-            console.log(dialog)
             dialog.style.display = 'block'
+        }
+        function newVersion () {
+            let params = {
+
+            }
+            add('yjy_version_arr', params)
         }
         function dialogConfirm () {
             var dialog = document.querySelector('.dialog')
             dialog.style.display = 'none'
             var start = document.querySelector('#start').value || new Date()
             var circle = document.querySelector('#circle').value || 14
-            initIndexDB(add, start, circle)
+            add('yjy_circle', {start, circle})
         }
-        function add(start, circle) {
-            request = db.transaction(['yjy_circle'], 'readwrite')
-                .objectStore('yjy_circle')
-                .add({ start: start, circle: circle, date: new Date()});
 
-            request.onsuccess = function (event) {
-                console.log('数据写入成功');
-            };
-
-            request.onerror = function (event) {
-                console.log('数据写入失败');
-            }
-        }
-        function read() {
-            var transaction = db.transaction(['yjy_circle']);
-            var objectStore = transaction.objectStore('yjy_circle');
-            var request = objectStore.get(1);
-
-            request.onerror = function(event) {
-                console.log('事务失败');
-            };
-
-            request.onsuccess = function( event) {
-                if (request.result) {
-                    console.log(request.result);
-                } else {
-                    console.log('未获得数据记录');
-                }
-            };
-        }
-        initIndexDB(read)
-
+        let yjy_circle = new InitIndexDB('yjy_circle');
+        yjy_circle.request = setCBfor(yjy_circle, 'read');
+        let yjy_version_arr = new InitIndexDB('yjy_version_arr');
+        yjy_circle.request = setCBfor(yjy_version_arr, 'read');
     </script>
 </body>
 </html>
