@@ -6,12 +6,17 @@
     <title>Document</title>
     <style>
         body {
-            padding: 30px;
+            padding: 60px 100px;
+        }
+        .showInfo {
+            display: flex;
+            justify-content: space-between;
         }
         .newCircle {
             max-width: 200px;
             height: 30px;
             margin-bottom: 10px;
+            padding: 0 20px;
             line-height: 30px;
             background: green;
             color: honeydew;
@@ -35,57 +40,117 @@
             color: honeydew;
             border-radius: 5px;
             text-align: center;
+            display: inline-block;
+        }
+        .showCircle div {
+        }
+        .showCircle div span {
+            width: 210px;
+            display: inline-block;
+            color: cadetblue;
+            text-align: right;
+            margin-right: 20px;
+        }
+        .mask {
+            display: none;
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            background-color: rgba(0, 0, 0, 0.3);
+        }
+        .newCircleDialog {
+            display: none;
+            padding: 60px 30px;
+            position: fixed;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            left: 50%;
+            background-color: #ffffff;
+            border-radius: 10px;
+        }
+        .versionList {}
+        .versionListItem {
+
+        }
+        .versionListItem p {
+        }
+        .versionListItem .active {
+            color:orangered;
+        }
+        .versionListItemInput {
+            width: 100%;
+            height: 200px;
         }
     </style>
 </head>
 <body>
-    <div class="newCircle" onclick="newCircle()">新建/新建周期</div>
-    <div class="newCircle" onclick="newVersion()">增加迭代版本</div>
+    <div class="showInfo">
+        <div>
+            <div class="newCircle" onclick="newCircle()">新建/新建周期</div>
+            <div class="newCircle" onclick="newVersionDialog()">增加迭代版本</div>
+        </div>
+        <div class="showCircle"></div>
+    </div>
     <div class="dialog">
         <input id="start" type="text" placeholder="请输入开始日期，默认从今天开始">
         <input id="circle" type="text" placeholder="请输入周期，默认为2周">
         <div class="dialogConfirm" onclick="dialogConfirm()">确定</div>
+        <div class="dialogConfirm" onclick="dialogCancle()">取消</div>
+    </div>
+    <div class="versionList"></div>
+    <div class="mask"></div>
+    <div class="newCircleDialog">
+        <div onclick="selectCircle(event)">是否使用默认日期？<label for="">是<input name="date" type="radio" value="1" /></label><label>否<input name="date" text="否" type="radio" value="0" /></label></div>
     </div>
     <script>
+        function formatTime (tempDate) {
+            tempDate = new Date(tempDate)
+            return `${tempDate.getFullYear()}-${tempDate.getMonth() + 1}-${tempDate.getDate()}`
+        }
+        function withinCircle (date, circle) {
+            
+        }
         function InitIndexDB (database, cb, params) {
             this.name = database;
             this.request = window.indexedDB.open(database, '1');
             return this;
         }
-        function setCBfor (obj, cb, params) {
+        function setCBfor (obj, cb, params, passCb) {
             let request = obj.request
             request.onerror = function (event) {
                 console.log('数据库打开报错');
             }
             request.onsuccess = function (event) {
                 obj.db = event.target.result;
-                cb && obj[cb](obj.name, params);
-                console.log('数据库打开成功');
+                cb && obj[cb](params, passCb);
             }
             request.onupgradeneeded = function (event) {
                 obj.db = event.target.result;
-                if (!obj.db.objectStoreNames.contains(database)) {
-                    obj.objectStore = obj.db.createObjectStore(database, { autoIncrement: true });
+                if (!obj.db.objectStoreNames.contains(obj.name)) {
+                    obj.objectStore = obj.db.createObjectStore(obj.name, { autoIncrement: true });
                 }
             }
             return request;
         }
-        InitIndexDB.prototype.add = function(database, params) {
-            this.addres = this.db.transaction([database], 'readwrite')
-                .objectStore(database)
-                .add({id: 1, ...params, date: new Date()});
+        InitIndexDB.prototype.add = function(params, cb) {
+            this.addres = this.db.transaction([this.name], 'readwrite')
+                .objectStore(this.name)
+                .add({...params, date: (new Date()).getTime()});
 
             this.addres.onsuccess = function (event) {
                 console.log('数据写入成功');
+                cb && cb()
             };
 
             this.addres.onerror = function (event) {
                 console.log('数据写入失败');
             }
         }
-        InitIndexDB.prototype.read = function(database) {
-            this.objectStore = this.db.transaction([database]).objectStore(database);
-            this.readres = this.objectStore.get(1);
+        InitIndexDB.prototype.read = function(params, cb) {
+            this.objectStore = this.db.transaction([this.name]).objectStore(this.name);
+            this.readres = this.objectStore.getAll();
 
             this.readres.onerror = function(event) {
                 console.log('事务失败');
@@ -93,35 +158,88 @@
 
             this.readres.onsuccess = function( event) {
                 if (event.target.result) {
-                    console.log(event.target.result);
+                    cb && cb(event.target.result);
                 } else {
                     console.log('未获得数据记录');
                 }
             };
         }
-
         function newCircle () {
             var dialog = document.querySelector('.dialog')
             dialog.style.display = 'block'
         }
-        function newVersion () {
-            let params = {
-
+        function newVersionDialog () {
+            const mask = document.querySelector('.mask')
+            const newCircleDialog = document.querySelector('.newCircleDialog')
+            mask.style.display = 'block'
+            newCircleDialog.style.display = 'block'
+        }
+        function selectCircle (event) {
+            const mask = document.querySelector('.mask')
+            const newCircleDialog = document.querySelector('.newCircleDialog')
+            mask.style.display = 'none'
+            newCircleDialog.style.display = 'none'
+            if (event.target.value == 1) {
+                newVersion()
+            } else {
+                const dialog = document.querySelector('.dialog')
+                dialog.style.display = 'block'
             }
-            add('yjy_version_arr', params)
+        }
+        function newVersion () {
+            let tempDate = (new Date()).getTime()
+            let params = {
+                title: tempDate,
+                value: ''
+            }
+            yjy_version_arr.add(params, function (data) {
+                const newVersionText = document.querySelector('.versionList')
+                let tempDiv = document.createElement('div')
+                tempDiv.className = 'versionList'
+                let title = `${formatTime(tempDate)}`
+                tempDiv.innerHTML = `<p>${formatTime(item.title)}</p><input ${disabled ? disabled = "disabled" : ''} type="textarea" placeholder="请输入笔记" class="versionListItemInput" value="${item.value}" />`
+                newVersionText.append(tempDiv)
+            })
         }
         function dialogConfirm () {
             var dialog = document.querySelector('.dialog')
             dialog.style.display = 'none'
-            var start = document.querySelector('#start').value || new Date()
+            var start = document.querySelector('#start').value || (new Date()).getTime()
             var circle = document.querySelector('#circle').value || 14
-            add('yjy_circle', {start, circle})
+            yjy_circle.add({start, circle}, function () {
+                window.location.reload()
+            })
         }
-
+        function dialogCancle () {
+            var dialog = document.querySelector('.dialog')
+            dialog.style.display = 'none'
+        }
         let yjy_circle = new InitIndexDB('yjy_circle');
-        yjy_circle.request = setCBfor(yjy_circle, 'read');
+        yjy_circle.request = setCBfor(yjy_circle, 'read', '', function (data) {
+            if (!data.length) return false
+            let showCircle = document.querySelector('.showCircle')
+            const {
+                circle,
+                date,
+                start
+            } = data[data.length - 1]
+            let time = new Date(date)
+            time = formatTime(time)
+            // <div><span>周期开始时间（默认此刻）：</span>${start}</div>
+            showCircle.innerHTML = `<div><span>目前周期：</span>${circle}</div><div><span>最后周期修改时间：</span>${time}</div>`
+        });
         let yjy_version_arr = new InitIndexDB('yjy_version_arr');
-        yjy_circle.request = setCBfor(yjy_version_arr, 'read');
+        yjy_version_arr.request = setCBfor(yjy_version_arr, 'read', '', function (data) {
+            if (!data.length) return false
+            const newVersionText = document.querySelector('.versionList')
+            data.map(item => {
+                let tempDiv = document.createElement('div')
+                tempDiv.className = 'versionListItem'
+                let disabled = false
+                tempDiv.innerHTML = `<p>${formatTime(item.title)}</p><input ${disabled ? disabled = "disabled" : ''} type="textarea" placeholder="请输入笔记" class="versionListItemInput" value="${item.value}" />`
+                newVersionText.append(tempDiv)
+            })
+        });
     </script>
 </body>
 </html>
