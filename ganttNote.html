@@ -82,6 +82,7 @@
         .versionListItemInput {
             width: 100%;
             height: 200px;
+            padding: 10px;
         }
     </style>
 </head>
@@ -110,7 +111,7 @@
             return `${tempDate.getFullYear()}-${tempDate.getMonth() + 1}-${tempDate.getDate()}`
         }
         function withinCircle (date, circle) {
-            
+
         }
         function InitIndexDB (database, cb, params) {
             this.name = database;
@@ -197,7 +198,7 @@
                 let tempDiv = document.createElement('div')
                 tempDiv.className = 'versionList'
                 let title = `${formatTime(tempDate)}`
-                tempDiv.innerHTML = `<p>${formatTime(item.title)}</p><input ${disabled ? disabled = "disabled" : ''} type="textarea" placeholder="请输入笔记" class="versionListItemInput" value="${item.value}" />`
+                tempDiv.innerHTML = `<p>${formatTime(item.title)}</p><textarea rows="5" cols="5" ${disabled ? disabled = "disabled" : ''} type="textarea" placeholder="请输入笔记" class="versionListItemInput" value="${item.value}" ></textarea>`
                 newVersionText.append(tempDiv)
             })
         }
@@ -236,7 +237,7 @@
                 let tempDiv = document.createElement('div')
                 tempDiv.className = 'versionListItem'
                 let disabled = false
-                tempDiv.innerHTML = `<p>${formatTime(item.title)}</p><input ${disabled ? disabled = "disabled" : ''} type="textarea" placeholder="请输入笔记" class="versionListItemInput" value="${item.value}" />`
+                tempDiv.innerHTML = `<p>${formatTime(item.title)}</p><textarea rows="5" cols="5" ${disabled ? disabled = "disabled" : ''} type="textarea" placeholder="请输入笔记" class="versionListItemInput" value="${item.value}"></textarea>`
                 newVersionText.append(tempDiv)
             })
         });
